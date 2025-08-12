@@ -1,0 +1,63 @@
+import requests
+import schedule
+import time
+from googletrans import Translator
+import telegram
+import os
+
+# توکن و چت‌آی‌دی شما
+BOT_TOKEN = "7750504733:AAHmIw6IS0DHjqDMuuarkguuvjiB0QM_ShA"
+CHAT_ID = "6602124493"
+
+bot = telegram.Bot(token=BOT_TOKEN)
+translator = Translator()
+
+# لیست سایت‌ها
+SOURCES = [
+    "https://api.rss2json.com/v1/api.json?rss_url=https://cointelegraph.com/rss",
+    "https://api.rss2json.com/v1/api.json?rss_url=https://www.coindesk.com/arc/outboundfeeds/rss/"
+]
+
+def get_news():
+    all_news = []
+    for url in SOURCES:
+        try:
+            res = requests.get(url)
+            data = res.json()
+            for item in data['items'][:3]:
+                title_fa = translator.translate(item['title'], src='en', dest='fa').text
+                link = item['link']
+                all_news.append(f"📌 {title_fa}\n🔗 {link}")
+        except Exception as e:
+            print("Error fetching:", e)
+    return "\n\n".join(all_news)
+
+def send_news():
+    news_text = get_news()
+    if news_text:
+        bot.send_message(chat_id=CHAT_ID, text=f"📰 جدیدترین اخبار کریپتو:\n\n{news_text}")
+
+# زمان‌بندی: هر روز ساعت 9 صبح
+schedule.every().day.at("09:00").do(send_news)
+
+print("ربات اجرا شد...")
+
+while True:
+    schedule.run_pending()
+    time.sleep(60)
+from flask import Flask
+import threading
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Bot is running!"
+
+def run_web():
+    app.run(host="0.0.0.0", port=8080)
+
+# اجرای Flask در یک Thread جدا
+t = threading.Thread(target=run_web)
+t.start()
+
